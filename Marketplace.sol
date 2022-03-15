@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AssetMarketplace is ERC721, Ownable {
-    address payable public _owner;
     uint256 assetCounter;
     uint256 tokenCounter;
     uint256 verifierCounter;
@@ -57,17 +56,11 @@ contract AssetMarketplace is ERC721, Ownable {
     Owner[] public owners;
 
     mapping(uint256 => Asset) public tokenIdToAsset;
-    mapping(uint256 => address) public tokenIdToOwner;
     mapping(uint256 => address) public assetToOwner;
     mapping(address => bool) public addressVerified;
     mapping(address => Owner) public addressToOwnerProfile;
 
     constructor() ERC721("AssetNFT", "ANFT") {
-        _owner = payable(msg.sender);
-        assetCounter = 0;
-        tokenCounter = 0;
-        verifierCounter = 0;
-        ownerCounter = 0;
     }
 
     modifier onlyVerifier() {
@@ -76,7 +69,7 @@ contract AssetMarketplace is ERC721, Ownable {
     }
 
     function withdraw() external onlyOwner {
-        _owner.transfer(address(this).balance);
+        payable(owner()).transfer(address(this).balance);
     }
 
     function createAsset(
@@ -113,7 +106,6 @@ contract AssetMarketplace is ERC721, Ownable {
         address owner = myAsset.owner;
         _mint(owner, tokenCounter);
         tokenIdToAsset[tokenCounter] = myAsset;
-        tokenIdToOwner[tokenCounter] = owner;
         tokenCounter++;
     }
 
@@ -165,14 +157,14 @@ contract AssetMarketplace is ERC721, Ownable {
 
     function listAsset(uint256 _tokenId, uint256 _price) public {
         require(_price > 0, "Price must be at least 1 wei");
+        require(msg.sender == ownerOf(_tokenId));
         Asset storage asset = tokenIdToAsset[_tokenId];
-        require(asset.verified == true);
+        require(asset.verified);
         asset.forSale = true;
         asset.price = _price;
         assets[asset.id] = asset;
 
-        _transfer(msg.sender, address(this), _tokenId);
-        tokenIdToOwner[_tokenId] = address(this);
+        approve(address(this), _tokenId);
         emit assetListingCreated(_tokenId, msg.sender, _price);
     }
 
@@ -192,13 +184,13 @@ contract AssetMarketplace is ERC721, Ownable {
             "Please pay more than the asking price for this item"
         );
 
-        transferFrom(address(this), msg.sender, _tokenId);
-
+        _transfer(ownerOf(_tokenId), msg.sender, _tokenId);
+        
+    
         asset.forSale = false;
         asset.price = 0;
         assets[asset.id] = asset;
 
         assetToOwner[asset.id] = msg.sender;
-        tokenIdToOwner[_tokenId] = msg.sender;
     }
 }
