@@ -184,6 +184,7 @@ contract AssetMarketplace is ERC721, Ownable {
             "Please pay more than the asking price for this item"
         );
 
+        payable(ownerOf(_tokenId)).transfer(msg.value);
         _transfer(ownerOf(_tokenId), msg.sender, _tokenId);
         
     
